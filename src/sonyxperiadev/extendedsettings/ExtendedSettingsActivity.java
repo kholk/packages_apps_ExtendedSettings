@@ -51,6 +51,8 @@ public class ExtendedSettingsActivity extends AppCompatPreferenceActivity {
     protected static final String SYSFS_FB_MODES = "/sys/devices/virtual/graphics/fb0/modes";
     protected static final String SYSFS_FB_MODESET = "/sys/devices/virtual/graphics/fb0/mode";
     protected static final String SYSFS_FB_PCC_PROFILE = "/sys/devices/mdss_dsi_panel/pcc_profile";
+    protected static final String SYSFS_FB_PCC_PROFILE_AVAIL =
+                                                   "/sys/devices/mdss_dsi_panel/pcc_profile_avail";
 
     protected static final String PREF_8MP_23MP_ENABLED = "persist.camera.8mp.config";
     protected static final String PREF_DISPCAL_SETTING = "persist.dispcal.setting";
@@ -247,8 +249,12 @@ public class ExtendedSettingsActivity extends AppCompatPreferenceActivity {
             getPreferenceScreen().removePreference(findPreference(mDynamicResolutionSwitchPref));
         }
 
-        initializeDispCalListPreference();
-        findPreference(mDispCalSwitchPref).setOnPreferenceChangeListener(mPreferenceListener);
+        if (isDispCalAvailable()) {
+            initializeDispCalListPreference();
+            findPreference(mDispCalSwitchPref).setOnPreferenceChangeListener(mPreferenceListener);
+        } else {
+            getPreferenceScreen().removePreference(findPreference(mDispCalSwitchPref));
+        }
 
         String adbN = getSystemProperty(PREF_ADB_NETWORK_READ);
         boolean adbNB = isNumeric(adbN) && (Integer.parseInt(adbN) > 0);
@@ -526,6 +532,20 @@ public class ExtendedSettingsActivity extends AppCompatPreferenceActivity {
 
         setSystemProperty("ctl.restart", "surfaceflinger");
         /* ToDo: Set nobootanimation back to 0 after SF restart */
+    }
+
+    protected boolean isDispCalAvailable() {
+        try {
+            FileInputStream sysfsFile = new FileInputStream(SYSFS_FB_PCC_PROFILE_AVAIL);
+            BufferedReader fileReader = new BufferedReader(
+                    new InputStreamReader(sysfsFile));
+            String isAvail = fileReader.readLine();
+
+            return Integer.getInteger(isAvail) > 0;
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     protected void initializeDispCalListPreference() {
